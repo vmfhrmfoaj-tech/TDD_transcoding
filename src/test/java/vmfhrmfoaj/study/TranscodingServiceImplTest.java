@@ -52,6 +52,9 @@ public class TranscodingServiceImplTest {
 	@Mock
 	private MediaSourceFile mediaSourceFile;
 	
+	@Mock
+	private DestinationStorage destinationStorage;
+	
 	private TranscodingService transcodingService;
 	
 	private Job mockJob;
@@ -67,7 +70,7 @@ public class TranscodingServiceImplTest {
 	@Before
 	public void setup() {
 		
-		mockJob = new Job(jobId, mediaSourceFile);
+		mockJob = new Job(jobId, mediaSourceFile, destinationStorage);
 		
 		transcodingService = new TranscodingServiceImpl(jobRepository, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
 		

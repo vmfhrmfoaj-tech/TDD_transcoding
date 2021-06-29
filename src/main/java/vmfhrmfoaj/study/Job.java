@@ -16,12 +16,14 @@ public class Job {
 	
 	private Long id;
 	private MediaSourceFile mediaSourceFile;
+	private DestinationStorage destinationStorage;
 	private State state;
 	private Throwable occerredException;
 
-	public Job(Long jobId, MediaSourceFile mediaSourceFile) {
+	public Job(Long jobId, MediaSourceFile mediaSourceFile, DestinationStorage destinationStorage) {
 		this.id = jobId;
 		this.mediaSourceFile = mediaSourceFile;
+		this.destinationStorage = destinationStorage;
 	}
 
 	public void transcode(Transcoder transcoder,
