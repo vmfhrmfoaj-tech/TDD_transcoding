@@ -4,7 +4,6 @@ public class TranscodingServiceImpl implements TranscodingService {
 	
 	private JobRepository jobRepository;
 
-	private MediaSourceCopier mediaSourceCopier;
 	
 	private Transcoder transcoder;
 	
@@ -14,12 +13,11 @@ public class TranscodingServiceImpl implements TranscodingService {
 	
 	private JobResultNotifier jobResultNotifier;
 
-	public TranscodingServiceImpl(JobRepository jobRepository, MediaSourceCopier mediaSourceCopier, Transcoder transcoder,
+	public TranscodingServiceImpl(JobRepository jobRepository, Transcoder transcoder,
 			ThumbnailExtractor thumbnailExtractor, CreatedFileSender createdFileSender,
 			JobResultNotifier jobResultNotifier) {
 		super();
 		this.jobRepository = jobRepository;
-		this.mediaSourceCopier = mediaSourceCopier;
 		this.transcoder = transcoder;
 		this.thumbnailExtractor = thumbnailExtractor;
 		this.createdFileSender = createdFileSender;
@@ -31,6 +29,6 @@ public class TranscodingServiceImpl implements TranscodingService {
 
 		Job job = jobRepository.findById(jobId);
 		
-		job.transcode(mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
+		job.transcode(transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
 	}
 }

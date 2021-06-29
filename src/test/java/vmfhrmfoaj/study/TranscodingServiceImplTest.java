@@ -35,9 +35,6 @@ public class TranscodingServiceImplTest {
 	private Long jobId = new Long(1);
 
 	@Mock
-	private MediaSourceCopier mediaSourceCopier;
-	
-	@Mock
 	private Transcoder transcoder;
 	
 	@Mock
@@ -52,11 +49,14 @@ public class TranscodingServiceImplTest {
 	@Mock
 	private JobRepository jobRepository;
 	
+	@Mock
+	private MediaSourceFile mediaSourceFile;
+	
 	private TranscodingService transcodingService;
 	
-	private Job mockJob = new Job(jobId);
+	private Job mockJob;
 
-	File mockMultimediaFile = mock(File.class);
+	File mockMultimediaFile;
 	
 	List<File> mockMultimediaFiles = new ArrayList<File>();
 	
@@ -66,11 +66,14 @@ public class TranscodingServiceImplTest {
 	
 	@Before
 	public void setup() {
-		transcodingService = new TranscodingServiceImpl(jobRepository, mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
+		
+		mockJob = new Job(jobId, mediaSourceFile);
+		
+		transcodingService = new TranscodingServiceImpl(jobRepository, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
 		
 		when(jobRepository.findById(jobId)).thenReturn(mockJob);
 		
-		when(mediaSourceCopier.copy(jobId)).thenReturn(mockMultimediaFile);
+		when(mediaSourceFile.getSourceFile()).thenReturn(mockMultimediaFile);
 		
 		when(transcoder.transcode(mockMultimediaFile, jobId)).thenReturn(mockMultimediaFiles);
 		
@@ -97,7 +100,7 @@ public class TranscodingServiceImplTest {
 	@Test
 	public void transcodeFailBecauseExceptionOccuredAtMediaSourceCopier() {
 		
-		when(mediaSourceCopier.copy(jobId)).thenThrow(mockException);
+		when(mediaSourceFile.getSourceFile()).thenThrow(mockException);
 		
 		assertJobIsWaitingState();
 		
@@ -193,8 +196,6 @@ public class TranscodingServiceImplTest {
 	
 	private void verifyCollaboration(VerifyOption opt) {
 
-		verify(mediaSourceCopier, only()).copy(jobId);
-		
 		if( opt.transcoderNever ) {
 			verify(transcoder, never()).transcode(any(File.class), anyLong());			
 		}else {
