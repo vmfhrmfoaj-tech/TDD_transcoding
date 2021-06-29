@@ -7,7 +7,8 @@ public class Job {
 		COMPLETED,
 		TRANSCODING, 
 		THUMBNAILEXTRACTING, 
-		CREATEDFILESEND
+		CREATEDFILESEND, 
+		JOBRESULTNOTIFY
 	}
 	
 	private State state;

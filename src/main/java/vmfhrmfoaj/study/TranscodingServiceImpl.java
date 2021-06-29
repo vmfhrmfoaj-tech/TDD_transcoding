@@ -55,7 +55,9 @@ public class TranscodingServiceImpl implements TranscodingService {
 		sendCreatedFilesToDestination(multimediaFiles, thumbnail, jobId);
 		
 		// 결과를 통보
+		changeJobState(jobId, Job.State.JOBRESULTNOTIFY);
 		notifyJob(jobId);
+		
 		changeJobState(jobId, Job.State.COMPLETED);
 	}
 
@@ -64,7 +66,12 @@ public class TranscodingServiceImpl implements TranscodingService {
 	}
 
 	private void notifyJob(Long jobId) {
-		jobResultNotifier.notifyJob(jobId);
+		try {
+			jobResultNotifier.notifyJob(jobId);
+		} catch (RuntimeException e) {
+			exceptionHandler.notifyJobException(jobId, e);
+			throw e;
+		}
 	}
 
 	private void sendCreatedFilesToDestination(List<File> multimediaFiles, File thumbnail, Long jobId) {
