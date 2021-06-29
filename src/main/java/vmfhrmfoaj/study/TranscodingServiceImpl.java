@@ -43,6 +43,7 @@ public class TranscodingServiceImpl implements TranscodingService {
 		File multimediaFile = copyMultimediaSourceToLocal(jobId);
 		
 		// 로컬에 복사된 파일을 변환처리한다.
+		changeJobState(jobId, Job.State.TRANSCODING);
 		List<File> multimediaFiles = transcode(multimediaFile, jobId);
 		
 		// 로컬에 복사된 파일로부터 이미지를 추출한다.
@@ -73,7 +74,12 @@ public class TranscodingServiceImpl implements TranscodingService {
 	}
 
 	private List<File> transcode(File multimediaFile, Long jobId) {
-		return transcoder.transcode(multimediaFile, jobId);
+		try {
+			return transcoder.transcode(multimediaFile, jobId);
+		} catch (RuntimeException e) {
+			exceptionHandler.notifyJobException(jobId, e);
+			throw e;
+		}
 	}
 
 	private File copyMultimediaSourceToLocal(Long jobId) {

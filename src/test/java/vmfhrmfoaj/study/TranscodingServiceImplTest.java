@@ -129,8 +129,6 @@ public class TranscodingServiceImplTest {
 	@Test
 	public void transcodeFailBecauseExceptionOccuredAtMediaSourceCopier() {
 		
-		when(jobRepository.findById(jobId)).thenReturn(mockJob);
-		
 		RuntimeException mockException = new RuntimeException();
 		when(mediaSourceCopier.copy(jobId)).thenThrow(mockException);
 		
@@ -149,6 +147,32 @@ public class TranscodingServiceImplTest {
 		
 		verify(mediaSourceCopier, only()).copy(jobId);
 		verify(transcoder, never()).transcode(any(File.class), anyLong());
+		verify(thumbnailExtractor, never()).extractThumnail(any(File.class), anyLong());
+		verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
+		verify(jobResultNotifier, never()).notifyJob(anyLong());
+	}
+	
+	@Test
+	public void transcodeFailBecauseExceptionOccuredAtTranscoder() {
+		
+		RuntimeException mockException = new RuntimeException();
+		when(transcoder.transcode(mockMultimediaFile, jobId)).thenThrow(mockException);
+		
+		try {
+			transcodingService.transcode(jobId);
+			fail("발생해야함");
+		} catch (Exception e) {
+			assertSame(mockException, e);
+		}
+		
+		Job job = jobRepository.findById(jobId);
+		assertTrue(job.isFinished());
+		assertFalse(job.isSuccess());
+		assertEquals(Job.State.TRANSCODING, job.isLastState());
+		assertNotNull(job.getOccerredException());
+		
+		verify(mediaSourceCopier, only()).copy(jobId);
+		verify(transcoder, only()).transcode(mockMultimediaFile, jobId);
 		verify(thumbnailExtractor, never()).extractThumnail(any(File.class), anyLong());
 		verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
 		verify(jobResultNotifier, never()).notifyJob(anyLong());
