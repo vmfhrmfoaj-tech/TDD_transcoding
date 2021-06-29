@@ -14,3 +14,5 @@ TDD 연습 2. TranscodingService의 실패 시나리오 테스트를 통한 점�
 TDD 연습 3. 테스트 코드 정리
 
 TDD 연습 4-1. 리팩토링! TranscodingService와 Job을 바꿔라!
+
+TDD 연습 4-2, 리팩토링 Job 도메인 모델 추가 그리고 변화 과정
