@@ -5,7 +5,8 @@ public class Job {
 	public static enum State{
 		MEDIASOURCECOPYING,
 		COMPLETED,
-		TRANSCODING
+		TRANSCODING, 
+		THUMBNAILEXTRACTING
 	}
 	
 	private State state;

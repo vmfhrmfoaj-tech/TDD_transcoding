@@ -47,6 +47,7 @@ public class TranscodingServiceImpl implements TranscodingService {
 		List<File> multimediaFiles = transcode(multimediaFile, jobId);
 		
 		// 로컬에 복사된 파일로부터 이미지를 추출한다.
+		changeJobState(jobId, Job.State.THUMBNAILEXTRACTING);
 		File thumbnail = extractThumbnail(multimediaFile, jobId);
 		
 		// 변환된 결과 파일과 썸네일 이미지를 목적지에 저장
@@ -70,7 +71,12 @@ public class TranscodingServiceImpl implements TranscodingService {
 	}
 
 	private File extractThumbnail(File multimediaFile, Long jobId) {
-		return thumbnailExtractor.extractThumnail(multimediaFile, jobId);
+		try {
+			return thumbnailExtractor.extractThumnail(multimediaFile, jobId);
+		} catch (RuntimeException e) {
+			exceptionHandler.notifyJobException(jobId, e);
+			throw e;
+		}
 	}
 
 	private List<File> transcode(File multimediaFile, Long jobId) {
