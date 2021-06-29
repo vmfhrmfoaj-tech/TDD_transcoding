@@ -51,6 +51,7 @@ public class TranscodingServiceImpl implements TranscodingService {
 		File thumbnail = extractThumbnail(multimediaFile, jobId);
 		
 		// 변환된 결과 파일과 썸네일 이미지를 목적지에 저장
+		changeJobState(jobId, Job.State.CREATEDFILESEND);
 		sendCreatedFilesToDestination(multimediaFiles, thumbnail, jobId);
 		
 		// 결과를 통보
@@ -67,7 +68,12 @@ public class TranscodingServiceImpl implements TranscodingService {
 	}
 
 	private void sendCreatedFilesToDestination(List<File> multimediaFiles, File thumbnail, Long jobId) {
-		createdFileSender.send(multimediaFiles, thumbnail, jobId);
+		try {
+			createdFileSender.send(multimediaFiles, thumbnail, jobId);
+		} catch (RuntimeException e) {
+			exceptionHandler.notifyJobException(jobId, e);
+			throw e;
+		}
 	}
 
 	private File extractThumbnail(File multimediaFile, Long jobId) {
