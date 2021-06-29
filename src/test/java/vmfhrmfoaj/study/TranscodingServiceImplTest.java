@@ -97,10 +97,6 @@ public class TranscodingServiceImplTest {
 			}
 			
 		}).when(jobExceptionHander).notifyJobException(anyLong(), any(RuntimeException.class));
-	}
-
-	@Test
-	public void transcodeSuccessfully() {
 		
 		when(jobRepository.findById(jobId)).thenReturn(mockJob);
 		
@@ -109,6 +105,10 @@ public class TranscodingServiceImplTest {
 		when(transcoder.transcode(mockMultimediaFile, jobId)).thenReturn(mockMultimediaFiles);
 		
 		when(thumbnailExtractor.extractThumnail(mockMultimediaFile, jobId)).thenReturn(mockThumnailFile);
+	}
+
+	@Test
+	public void transcodeSuccessfully() {
 		
 		Job job = jobRepository.findById(jobId);
 		assertTrue(job.isWaiting());
