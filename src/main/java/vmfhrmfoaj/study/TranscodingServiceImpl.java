@@ -3,6 +3,8 @@ package vmfhrmfoaj.study;
 import java.io.File;
 import java.util.List;
 
+import vmfhrmfoaj.study.Job.State;
+
 public class TranscodingServiceImpl implements TranscodingService {
 
 	private MediaSourceCopier mediaSourceCopier;
@@ -14,22 +16,30 @@ public class TranscodingServiceImpl implements TranscodingService {
 	private CreatedFileSender createdFileSender;
 	
 	private JobResultNotifier jobResultNotifier;
+
+	private JobStateChanger jobStateChanger;
+
+	private JobExceptionHander exceptionHandler;
 	
 	public TranscodingServiceImpl(MediaSourceCopier mediaSourceCopier, Transcoder transcoder,
 			ThumbnailExtractor thumbnailExtractor, CreatedFileSender createdFileSender,
-			JobResultNotifier jobResultNotifier) {
+			JobResultNotifier jobResultNotifier, JobStateChanger jobStateChanger,
+			JobExceptionHander exceptionHandler) {
 		super();
 		this.mediaSourceCopier = mediaSourceCopier;
 		this.transcoder = transcoder;
 		this.thumbnailExtractor = thumbnailExtractor;
 		this.createdFileSender = createdFileSender;
 		this.jobResultNotifier = jobResultNotifier;
+		this.jobStateChanger = jobStateChanger;
+		this.exceptionHandler = exceptionHandler;
 	}
 	
 	@Override
 	public void transcode(Long jobId) {
 
 		// 미디어 원본으로부터 파일을 로컬에 복사한다.
+		changeJobState(jobId, Job.State.MEDIASOURCECOPYING);
 		File multimediaFile = copyMultimediaSourceToLocal(jobId);
 		
 		// 로컬에 복사된 파일을 변환처리한다.
@@ -43,6 +53,11 @@ public class TranscodingServiceImpl implements TranscodingService {
 		
 		// 결과를 통보
 		notifyJob(jobId);
+		changeJobState(jobId, Job.State.COMPLETED);
+	}
+
+	private void changeJobState(Long jobId, State state) {
+		jobStateChanger.changeJobState(jobId, state);
 	}
 
 	private void notifyJob(Long jobId) {
@@ -62,6 +77,11 @@ public class TranscodingServiceImpl implements TranscodingService {
 	}
 
 	private File copyMultimediaSourceToLocal(Long jobId) {
-		return mediaSourceCopier.copy(jobId);
+		try {
+			return mediaSourceCopier.copy(jobId);
+		} catch (RuntimeException e) {
+			exceptionHandler.notifyJobException(jobId, e);
+			throw e;
+		}
 	}
 }
