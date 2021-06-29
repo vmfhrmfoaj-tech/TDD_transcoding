@@ -8,13 +8,14 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.anyListOf;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -41,9 +42,6 @@ public class TranscodingServiceImplTest {
 	private ThumbnailExtractor thumbnailExtractor;
 	
 	@Mock
-	private CreatedFileSender createdFileSender;
-	
-	@Mock
 	private JobResultNotifier jobResultNotifier;
 	
 	@Mock
@@ -51,6 +49,9 @@ public class TranscodingServiceImplTest {
 	
 	@Mock
 	private MediaSourceFile mediaSourceFile;
+	
+	@Mock
+	private DestinationStorage destinationStorage;
 	
 	private TranscodingService transcodingService;
 	
@@ -67,9 +68,9 @@ public class TranscodingServiceImplTest {
 	@Before
 	public void setup() {
 		
-		mockJob = new Job(jobId, mediaSourceFile);
+		mockJob = new Job(jobId, mediaSourceFile, destinationStorage);
 		
-		transcodingService = new TranscodingServiceImpl(jobRepository, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
+		transcodingService = new TranscodingServiceImpl(jobRepository, transcoder, thumbnailExtractor, jobResultNotifier);
 		
 		when(jobRepository.findById(jobId)).thenReturn(mockJob);
 		
@@ -109,7 +110,7 @@ public class TranscodingServiceImplTest {
 		VerifyOption verifyOption = new VerifyOption();
         verifyOption.transcoderNever = true;
         verifyOption.thumbnailExtractorNever = true;
-        verifyOption.createdFileSenderNever = true;
+        verifyOption.destinationStorageNever = true;
         verifyOption.jobResultNotifierNever = true;
         verifyCollaboration(verifyOption);
 	}
@@ -125,7 +126,7 @@ public class TranscodingServiceImplTest {
 		
 		VerifyOption verifyOption = new VerifyOption();
         verifyOption.thumbnailExtractorNever = true;
-        verifyOption.createdFileSenderNever = true;
+        verifyOption.destinationStorageNever = true;
         verifyOption.jobResultNotifierNever = true;
         verifyCollaboration(verifyOption);
 	}
@@ -140,7 +141,7 @@ public class TranscodingServiceImplTest {
 		executeFailingTranscodeAndAssertFail(Job.State.THUMBNAILEXTRACTING);
 		
 		VerifyOption verifyOption = new VerifyOption();
-        verifyOption.createdFileSenderNever = true;
+        verifyOption.destinationStorageNever = true;
         verifyOption.jobResultNotifierNever = true;
         verifyCollaboration(verifyOption);
 	}
@@ -148,7 +149,7 @@ public class TranscodingServiceImplTest {
 	@Test
 	public void transcodeFailBecauseExceptionOccuredAtCreatedFileSender() {
 		
-		Mockito.doThrow(mockException).when(createdFileSender).send(mockMultimediaFiles, mockThumnailFile, jobId);
+		doThrow(mockException).when(destinationStorage).store(mockMultimediaFiles, mockThumnailFile, jobId);
 		
 		assertJobIsWaitingState();
 		
@@ -195,6 +196,8 @@ public class TranscodingServiceImplTest {
 	}
 	
 	private void verifyCollaboration(VerifyOption opt) {
+		
+		verify(mediaSourceFile, only()).getSourceFile();	
 
 		if( opt.transcoderNever ) {
 			verify(transcoder, never()).transcode(any(File.class), anyLong());			
@@ -208,10 +211,10 @@ public class TranscodingServiceImplTest {
 			verify(thumbnailExtractor, only()).extractThumnail(mockMultimediaFile, jobId);
 		}
 		
-		if( opt.createdFileSenderNever) {
-			verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
+		if( opt.destinationStorageNever) {
+			verify(destinationStorage, never()).store(anyListOf(File.class), any(File.class), anyLong());
 		}else {
-			verify(createdFileSender, only()).send(mockMultimediaFiles, mockThumnailFile, jobId);
+			verify(destinationStorage, only()).store(mockMultimediaFiles, mockThumnailFile, jobId);
 		}
 		
 		if( opt.jobResultNotifierNever) {
@@ -226,7 +229,7 @@ public class TranscodingServiceImplTest {
 	class VerifyOption{
 
 		public boolean jobResultNotifierNever = false;
-		public boolean createdFileSenderNever = false;
+		public boolean destinationStorageNever = false;
 		public boolean thumbnailExtractorNever = false;
 		public boolean transcoderNever = false;
 		
