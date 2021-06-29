@@ -15,21 +15,23 @@ public class Job {
 	}
 	
 	private Long id;
+	private MediaSourceFile mediaSourceFile;
 	private State state;
 	private Throwable occerredException;
 
-	public Job(Long jobId) {
+	public Job(Long jobId, MediaSourceFile mediaSourceFile) {
 		this.id = jobId;
+		this.mediaSourceFile = mediaSourceFile;
 	}
 
-	public void transcode(MediaSourceCopier mediaSourceCopier, Transcoder transcoder,
+	public void transcode(Transcoder transcoder,
 			ThumbnailExtractor thumbnailExtractor, CreatedFileSender createdFileSender,
 			JobResultNotifier jobResultNotifier) {
 
 		try {
 			// 미디어 원본으로부터 파일을 로컬에 복사한다.
 			changeJobState(Job.State.MEDIASOURCECOPYING);
-			File multimediaFile = copyMultimediaSourceToLocal(mediaSourceCopier);
+			File multimediaFile = copyMultimediaSourceToLocal();
 			
 			// 로컬에 복사된 파일을 변환처리한다.
 			changeJobState(Job.State.TRANSCODING);
@@ -74,8 +76,8 @@ public class Job {
 		return occerredException;
 	};
 
-	private File copyMultimediaSourceToLocal(MediaSourceCopier mediaSourceCopier) {
-		return mediaSourceCopier.copy(this.id);
+	private File copyMultimediaSourceToLocal() {
+		return mediaSourceFile.getSourceFile();
 	}
 
 	private List<File> transcode(File multimediaFile, Transcoder transcoder) {
