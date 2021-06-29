@@ -63,6 +63,12 @@ public class TranscodingServiceImplTest {
 	private TranscodingService transcodingService;
 	
 	private Job mockJob = new Job();
+
+	File mockMultimediaFile = mock(File.class);
+	
+	List<File> mockMultimediaFiles = new ArrayList<File>();
+	
+	File mockThumnailFile = mock(File.class);
 	
 	@Before
 	public void setup() {
@@ -98,13 +104,10 @@ public class TranscodingServiceImplTest {
 		
 		when(jobRepository.findById(jobId)).thenReturn(mockJob);
 		
-		File mockMultimediaFile = mock(File.class);
 		when(mediaSourceCopier.copy(jobId)).thenReturn(mockMultimediaFile);
 		
-		List<File> mockMultimediaFiles = new ArrayList<File>();
 		when(transcoder.transcode(mockMultimediaFile, jobId)).thenReturn(mockMultimediaFiles);
 		
-		File mockThumnailFile = mock(File.class);
 		when(thumbnailExtractor.extractThumnail(mockMultimediaFile, jobId)).thenReturn(mockThumnailFile);
 		
 		Job job = jobRepository.findById(jobId);
