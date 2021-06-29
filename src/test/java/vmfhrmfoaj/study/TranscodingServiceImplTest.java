@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
@@ -63,6 +64,14 @@ public class TranscodingServiceImplTest {
 	private TranscodingService transcodingService;
 	
 	private Job mockJob = new Job();
+
+	File mockMultimediaFile = mock(File.class);
+	
+	List<File> mockMultimediaFiles = new ArrayList<File>();
+	
+	File mockThumnailFile = mock(File.class);
+	
+	RuntimeException mockException = new RuntimeException();
 	
 	@Before
 	public void setup() {
@@ -91,46 +100,116 @@ public class TranscodingServiceImplTest {
 			}
 			
 		}).when(jobExceptionHander).notifyJobException(anyLong(), any(RuntimeException.class));
+		
+		when(jobRepository.findById(jobId)).thenReturn(mockJob);
+		
+		when(mediaSourceCopier.copy(jobId)).thenReturn(mockMultimediaFile);
+		
+		when(transcoder.transcode(mockMultimediaFile, jobId)).thenReturn(mockMultimediaFiles);
+		
+		when(thumbnailExtractor.extractThumnail(mockMultimediaFile, jobId)).thenReturn(mockThumnailFile);
 	}
 
 	@Test
 	public void transcodeSuccessfully() {
 		
-		when(jobRepository.findById(jobId)).thenReturn(mockJob);
-		
-		File mockMultimediaFile = mock(File.class);
-		when(mediaSourceCopier.copy(jobId)).thenReturn(mockMultimediaFile);
-		
-		List<File> mockMultimediaFiles = new ArrayList<File>();
-		when(transcoder.transcode(mockMultimediaFile, jobId)).thenReturn(mockMultimediaFiles);
-		
-		File mockThumnailFile = mock(File.class);
-		when(thumbnailExtractor.extractThumnail(mockMultimediaFile, jobId)).thenReturn(mockThumnailFile);
-		
-		Job job = jobRepository.findById(jobId);
-		assertTrue(job.isWaiting());
+		assertJobIsWaitingState();
 		
 		transcodingService.transcode(jobId);
+		
+		Job job = jobRepository.findById(jobId);
 		assertTrue(job.isFinished());
 		assertTrue(job.isSuccess());
 		assertEquals(Job.State.COMPLETED, job.isLastState());
 		assertNull(job.getOccerredException());
 		
-		verify(mediaSourceCopier, only()).copy(jobId);
-		verify(transcoder, only()).transcode(mockMultimediaFile, jobId);
-		verify(thumbnailExtractor, only()).extractThumnail(mockMultimediaFile, jobId);
-		verify(createdFileSender, only()).send(mockMultimediaFiles, mockThumnailFile, jobId);
-		verify(jobResultNotifier, only()).notifyJob(jobId);
+		VerifyOption verifyOption = new VerifyOption();
+        verifyCollaboration(verifyOption);
 	}
-	
+
 	@Test
 	public void transcodeFailBecauseExceptionOccuredAtMediaSourceCopier() {
 		
-		when(jobRepository.findById(jobId)).thenReturn(mockJob);
-		
-		RuntimeException mockException = new RuntimeException();
 		when(mediaSourceCopier.copy(jobId)).thenThrow(mockException);
 		
+		assertJobIsWaitingState();
+		
+		executeFailingTranscodeAndAssertFail(Job.State.MEDIASOURCECOPYING);
+		
+		VerifyOption verifyOption = new VerifyOption();
+        verifyOption.transcoderNever = true;
+        verifyOption.thumbnailExtractorNever = true;
+        verifyOption.createdFileSenderNever = true;
+        verifyOption.jobResultNotifierNever = true;
+        verifyCollaboration(verifyOption);
+	}
+	
+	@Test
+	public void transcodeFailBecauseExceptionOccuredAtTranscoder() {
+		
+		when(transcoder.transcode(mockMultimediaFile, jobId)).thenThrow(mockException);
+		
+		assertJobIsWaitingState();
+		
+		executeFailingTranscodeAndAssertFail(Job.State.TRANSCODING);
+		
+		VerifyOption verifyOption = new VerifyOption();
+        verifyOption.thumbnailExtractorNever = true;
+        verifyOption.createdFileSenderNever = true;
+        verifyOption.jobResultNotifierNever = true;
+        verifyCollaboration(verifyOption);
+	}
+	
+	@Test
+	public void transcodeFailBecauseExceptionOccuredAtThumbnailExtract() {
+		
+		when(thumbnailExtractor.extractThumnail(mockMultimediaFile, jobId)).thenThrow(mockException);
+		
+		assertJobIsWaitingState();
+		
+		executeFailingTranscodeAndAssertFail(Job.State.THUMBNAILEXTRACTING);
+		
+		VerifyOption verifyOption = new VerifyOption();
+        verifyOption.createdFileSenderNever = true;
+        verifyOption.jobResultNotifierNever = true;
+        verifyCollaboration(verifyOption);
+	}
+	
+	@Test
+	public void transcodeFailBecauseExceptionOccuredAtCreatedFileSender() {
+		
+		Mockito.doThrow(mockException).when(createdFileSender).send(mockMultimediaFiles, mockThumnailFile, jobId);
+		
+		assertJobIsWaitingState();
+		
+		executeFailingTranscodeAndAssertFail(Job.State.CREATEDFILESEND);
+		
+		VerifyOption verifyOption = new VerifyOption();
+        verifyOption.jobResultNotifierNever = true;
+        verifyCollaboration(verifyOption);
+	}
+	
+	@Test
+	public void transcodeFailBecauseExceptionOccuredAtjobResultNotifier() {
+		
+		Mockito.doThrow(mockException).when(jobResultNotifier).notifyJob(jobId);
+		
+		assertJobIsWaitingState();
+		
+		executeFailingTranscodeAndAssertFail(Job.State.JOBRESULTNOTIFY);
+		
+		VerifyOption verifyOption = new VerifyOption();
+        verifyCollaboration(verifyOption);
+	}
+	
+	private void assertJobIsWaitingState() {
+		
+		Job job = jobRepository.findById(jobId);
+		assertTrue(job.isWaiting());
+	}
+
+	private void executeFailingTranscodeAndAssertFail(State state) {
+
 		try {
 			transcodingService.transcode(jobId);
 			fail("발생해야함");
@@ -141,13 +220,47 @@ public class TranscodingServiceImplTest {
 		Job job = jobRepository.findById(jobId);
 		assertTrue(job.isFinished());
 		assertFalse(job.isSuccess());
-		assertEquals(Job.State.MEDIASOURCECOPYING, job.isLastState());
+		assertEquals(state, job.isLastState());
 		assertNotNull(job.getOccerredException());
-		
+	}
+	
+	private void verifyCollaboration(VerifyOption opt) {
+
 		verify(mediaSourceCopier, only()).copy(jobId);
-		verify(transcoder, never()).transcode(any(File.class), anyLong());
-		verify(thumbnailExtractor, never()).extractThumnail(any(File.class), anyLong());
-		verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
-		verify(jobResultNotifier, never()).notifyJob(anyLong());
+		
+		if( opt.transcoderNever ) {
+			verify(transcoder, never()).transcode(any(File.class), anyLong());			
+		}else {
+			verify(transcoder, only()).transcode(mockMultimediaFile, jobId);			
+		}
+		
+		if( opt.thumbnailExtractorNever) {
+			verify(thumbnailExtractor, never()).extractThumnail(any(File.class), anyLong());
+		}else {
+			verify(thumbnailExtractor, only()).extractThumnail(mockMultimediaFile, jobId);
+		}
+		
+		if( opt.createdFileSenderNever) {
+			verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
+		}else {
+			verify(createdFileSender, only()).send(mockMultimediaFiles, mockThumnailFile, jobId);
+		}
+		
+		if( opt.jobResultNotifierNever) {
+			verify(jobResultNotifier, never()).notifyJob(anyLong());
+		}else {
+			verify(jobResultNotifier, only()).notifyJob(jobId);
+		}
+		
+	}
+
+	
+	class VerifyOption{
+
+		public boolean jobResultNotifierNever = false;
+		public boolean createdFileSenderNever = false;
+		public boolean thumbnailExtractorNever = false;
+		public boolean transcoderNever = false;
+		
 	}
 }
