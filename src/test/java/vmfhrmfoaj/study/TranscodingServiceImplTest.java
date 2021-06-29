@@ -63,7 +63,7 @@ public class TranscodingServiceImplTest {
 	
 	private TranscodingService transcodingService;
 	
-	private Job mockJob = new Job();
+	private Job mockJob = new Job(jobId);
 
 	File mockMultimediaFile = mock(File.class);
 	
@@ -75,7 +75,7 @@ public class TranscodingServiceImplTest {
 	
 	@Before
 	public void setup() {
-		transcodingService = new TranscodingServiceImpl(mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier, jobStateChanger, jobExceptionHander);
+		transcodingService = new TranscodingServiceImpl(jobRepository, mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier, jobStateChanger, jobExceptionHander);
 		
 		doAnswer(new Answer<Object>() {
 
