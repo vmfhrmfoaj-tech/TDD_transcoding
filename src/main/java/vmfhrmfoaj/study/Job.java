@@ -13,8 +13,7 @@ public class Job {
 
 	public void transcode(MediaSourceCopier mediaSourceCopier, Transcoder transcoder,
 			ThumbnailExtractor thumbnailExtractor, CreatedFileSender createdFileSender,
-			JobResultNotifier jobResultNotifier, JobStateChanger jobStateChanger,
-			JobExceptionHander exceptionHandler) {
+			JobResultNotifier jobResultNotifier) {
 
 		try {
 			// 미디어 원본으로부터 파일을 로컬에 복사한다.

@@ -10,7 +10,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
@@ -26,9 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 
 import vmfhrmfoaj.study.Job.State;
 
@@ -53,13 +50,7 @@ public class TranscodingServiceImplTest {
 	private JobResultNotifier jobResultNotifier;
 	
 	@Mock
-	private JobStateChanger jobStateChanger;
-
-	@Mock
 	private JobRepository jobRepository;
-	
-	@Mock
-	private JobExceptionHander jobExceptionHander;
 	
 	private TranscodingService transcodingService;
 	
@@ -75,31 +66,7 @@ public class TranscodingServiceImplTest {
 	
 	@Before
 	public void setup() {
-		transcodingService = new TranscodingServiceImpl(jobRepository, mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier, jobStateChanger, jobExceptionHander);
-		
-		doAnswer(new Answer<Object>() {
-
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
-				
-				State newState = (State)invocation.getArguments()[1];
-				mockJob.changeState(newState);
-				return null;
-			}
-			
-		}).when(jobStateChanger).changeJobState(anyLong(),  any(Job.State.class));;
-		
-		doAnswer(new Answer<Object>() {
-
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
-				
-				RuntimeException ex = (RuntimeException)invocation.getArguments()[1];
-				mockJob.exceptionOccurred(ex);
-				return null;
-			}
-			
-		}).when(jobExceptionHander).notifyJobException(anyLong(), any(RuntimeException.class));
+		transcodingService = new TranscodingServiceImpl(jobRepository, mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
 		
 		when(jobRepository.findById(jobId)).thenReturn(mockJob);
 		

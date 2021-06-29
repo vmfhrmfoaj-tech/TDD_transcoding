@@ -14,14 +14,9 @@ public class TranscodingServiceImpl implements TranscodingService {
 	
 	private JobResultNotifier jobResultNotifier;
 
-	private JobStateChanger jobStateChanger;
-
-	private JobExceptionHander exceptionHandler;
-	
 	public TranscodingServiceImpl(JobRepository jobRepository, MediaSourceCopier mediaSourceCopier, Transcoder transcoder,
 			ThumbnailExtractor thumbnailExtractor, CreatedFileSender createdFileSender,
-			JobResultNotifier jobResultNotifier, JobStateChanger jobStateChanger,
-			JobExceptionHander exceptionHandler) {
+			JobResultNotifier jobResultNotifier) {
 		super();
 		this.jobRepository = jobRepository;
 		this.mediaSourceCopier = mediaSourceCopier;
@@ -29,8 +24,6 @@ public class TranscodingServiceImpl implements TranscodingService {
 		this.thumbnailExtractor = thumbnailExtractor;
 		this.createdFileSender = createdFileSender;
 		this.jobResultNotifier = jobResultNotifier;
-		this.jobStateChanger = jobStateChanger;
-		this.exceptionHandler = exceptionHandler;
 	}
 	
 	@Override
@@ -38,6 +31,6 @@ public class TranscodingServiceImpl implements TranscodingService {
 
 		Job job = jobRepository.findById(jobId);
 		
-		job.transcode(mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier, jobStateChanger, exceptionHandler);
+		job.transcode(mediaSourceCopier, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
 	}
 }
