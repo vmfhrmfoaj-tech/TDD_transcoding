@@ -8,13 +8,13 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -39,9 +39,6 @@ public class TranscodingServiceImplTest {
 	
 	@Mock
 	private ThumbnailExtractor thumbnailExtractor;
-	
-	@Mock
-	private CreatedFileSender createdFileSender;
 	
 	@Mock
 	private JobResultNotifier jobResultNotifier;
@@ -72,7 +69,7 @@ public class TranscodingServiceImplTest {
 		
 		mockJob = new Job(jobId, mediaSourceFile, destinationStorage);
 		
-		transcodingService = new TranscodingServiceImpl(jobRepository, transcoder, thumbnailExtractor, createdFileSender, jobResultNotifier);
+		transcodingService = new TranscodingServiceImpl(jobRepository, transcoder, thumbnailExtractor, jobResultNotifier);
 		
 		when(jobRepository.findById(jobId)).thenReturn(mockJob);
 		
@@ -151,7 +148,7 @@ public class TranscodingServiceImplTest {
 	@Test
 	public void transcodeFailBecauseExceptionOccuredAtCreatedFileSender() {
 		
-		Mockito.doThrow(mockException).when(createdFileSender).send(mockMultimediaFiles, mockThumnailFile, jobId);
+		doThrow(mockException).when(destinationStorage).store(mockMultimediaFiles, mockThumnailFile, jobId);
 		
 		assertJobIsWaitingState();
 		
@@ -211,11 +208,11 @@ public class TranscodingServiceImplTest {
 			verify(thumbnailExtractor, only()).extractThumnail(mockMultimediaFile, jobId);
 		}
 		
-		if( opt.createdFileSenderNever) {
-			verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
-		}else {
-			verify(createdFileSender, only()).send(mockMultimediaFiles, mockThumnailFile, jobId);
-		}
+//		if( opt.createdFileSenderNever) {
+//			verify(createdFileSender, never()).send(anyListOf(File.class), any(File.class), anyLong());
+//		}else {
+//			verify(createdFileSender, only()).send(mockMultimediaFiles, mockThumnailFile, jobId);
+//		}
 		
 		if( opt.jobResultNotifierNever) {
 			verify(jobResultNotifier, never()).notifyJob(anyLong());
