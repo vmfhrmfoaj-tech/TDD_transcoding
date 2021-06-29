@@ -4,8 +4,19 @@ import java.io.File;
 import java.util.List;
 
 public class Job {
+
+	public static enum State{
+		MEDIASOURCECOPYING,
+		COMPLETED,
+		TRANSCODING, 
+		THUMBNAILEXTRACTING, 
+		CREATEDFILESEND, 
+		JOBRESULTNOTIFY
+	}
 	
-	Long id;
+	private Long id;
+	private State state;
+	private Throwable occerredException;
 
 	public Job(Long jobId) {
 		this.id = jobId;
@@ -38,10 +49,30 @@ public class Job {
 			
 			changeJobState(Job.State.COMPLETED);
 		} catch (RuntimeException e) {
-			occerredException = e;
+			exceptionOccurred(e);
 			throw e;
 		}
 	}
+
+	public Object isLastState() {
+		return state;
+	}
+
+	public boolean isSuccess() {
+		return state == State.COMPLETED;
+	}
+
+	public boolean isWaiting() {
+		return state == null;
+	}
+
+	public boolean isFinished() {
+		return isSuccess() || isExceptionOccurred();
+	}
+
+	public Object getOccerredException() {
+		return occerredException;
+	};
 
 	private File copyMultimediaSourceToLocal(MediaSourceCopier mediaSourceCopier) {
 		return mediaSourceCopier.copy(this.id);
@@ -67,48 +98,11 @@ public class Job {
 		this.state = newState;
 	}
 
-	public static enum State{
-		MEDIASOURCECOPYING,
-		COMPLETED,
-		TRANSCODING, 
-		THUMBNAILEXTRACTING, 
-		CREATEDFILESEND, 
-		JOBRESULTNOTIFY
-	}
-	
-	private State state;
-	private Throwable occerredException;
-
-	public Object isLastState() {
-		return state;
-	}
-
-	public void changeState(State newState) {
-		this.state = newState;
-	}
-
-	public boolean isSuccess() {
-		return state == State.COMPLETED;
-	}
-
-	public boolean isWaiting() {
-		return state == null;
-	}
-
-	public boolean isFinished() {
-		return isSuccess() || isExceptionOccurred();
-	}
-
 	private boolean isExceptionOccurred() {
 		return (occerredException != null);
 	}
-
-	public Object getOccerredException() {
-		return occerredException;
-	};
 	
-	public void exceptionOccurred(RuntimeException e) {
+	private void exceptionOccurred(RuntimeException e) {
 		this.occerredException = e;
 	}
-
 }
