@@ -113,10 +113,11 @@ public class TranscodingServiceImplTest {
 	@Test
 	public void transcodeSuccessfully() {
 		
-		Job job = jobRepository.findById(jobId);
-		assertTrue(job.isWaiting());
+		assertJobIsWaitingState();
 		
 		transcodingService.transcode(jobId);
+		
+		Job job = jobRepository.findById(jobId);
 		assertTrue(job.isFinished());
 		assertTrue(job.isSuccess());
 		assertEquals(Job.State.COMPLETED, job.isLastState());
@@ -129,10 +130,18 @@ public class TranscodingServiceImplTest {
 		verify(jobResultNotifier, only()).notifyJob(jobId);
 	}
 	
+	private void assertJobIsWaitingState() {
+		
+		Job job = jobRepository.findById(jobId);
+		assertTrue(job.isWaiting());
+	}
+
 	@Test
 	public void transcodeFailBecauseExceptionOccuredAtMediaSourceCopier() {
 		
 		when(mediaSourceCopier.copy(jobId)).thenThrow(mockException);
+		
+		assertJobIsWaitingState();
 		
 		executeFailingTranscodeAndAssertFail(Job.State.MEDIASOURCECOPYING);
 		
@@ -148,6 +157,8 @@ public class TranscodingServiceImplTest {
 		
 		when(transcoder.transcode(mockMultimediaFile, jobId)).thenThrow(mockException);
 		
+		assertJobIsWaitingState();
+		
 		executeFailingTranscodeAndAssertFail(Job.State.TRANSCODING);
 		
 		verify(mediaSourceCopier, only()).copy(jobId);
@@ -161,6 +172,8 @@ public class TranscodingServiceImplTest {
 	public void transcodeFailBecauseExceptionOccuredAtThumbnailExtract() {
 		
 		when(thumbnailExtractor.extractThumnail(mockMultimediaFile, jobId)).thenThrow(mockException);
+		
+		assertJobIsWaitingState();
 		
 		executeFailingTranscodeAndAssertFail(Job.State.THUMBNAILEXTRACTING);
 		
@@ -176,6 +189,8 @@ public class TranscodingServiceImplTest {
 		
 		Mockito.doThrow(mockException).when(createdFileSender).send(mockMultimediaFiles, mockThumnailFile, jobId);
 		
+		assertJobIsWaitingState();
+		
 		executeFailingTranscodeAndAssertFail(Job.State.CREATEDFILESEND);
 		
 		verify(mediaSourceCopier, only()).copy(jobId);
@@ -189,6 +204,8 @@ public class TranscodingServiceImplTest {
 	public void transcodeFailBecauseExceptionOccuredAtjobResultNotifier() {
 		
 		Mockito.doThrow(mockException).when(jobResultNotifier).notifyJob(jobId);
+		
+		assertJobIsWaitingState();
 		
 		executeFailingTranscodeAndAssertFail(Job.State.JOBRESULTNOTIFY);
 		
